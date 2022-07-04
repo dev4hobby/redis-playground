@@ -38,7 +38,7 @@ Now all of redis-master-1, redis-master-2, redis-master-3 are in the cluster.
 docker exec -it redis-master-1 bash -c "redis-cli -c -p 7001 set foo bar"
 docker exec -it redis-master-1 bash -c "redis-cli -c -p 7003 get foo"
 
-# of just..
+# or just..
 make io-example
 ```
 
