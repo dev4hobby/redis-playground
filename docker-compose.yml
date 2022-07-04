@@ -1,0 +1,35 @@
+version: '3'
+services:
+  redis-master-1:
+    container_name: redis-master-1
+    image: redis:7.0.2
+    network_mode: host
+    command: redis-server /etc/redis.conf
+    volumes:
+      - ./redis-master-1.conf:/etc/redis.conf
+    restart: always
+    ports:
+      - 7001:7001
+      - 17001:17001
+  redis-master-2:
+    container_name: redis-master-2
+    image: redis:7.0.2
+    network_mode: host
+    command: redis-server /etc/redis.conf
+    volumes:
+      - ./redis-master-2.conf:/etc/redis.conf
+    restart: always
+    ports:
+      - 7002:7002
+      - 17002:17002
+  redis-master-3:
+    container_name: redis-master-3
+    image: redis:7.0.2
+    network_mode: host
+    command: redis-server /etc/redis.conf
+    volumes:
+      - ./redis-master-3.conf:/etc/redis.conf
+    restart: always
+    ports:
+      - 7003:7003
+      - 17003:17003
