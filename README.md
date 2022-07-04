@@ -19,7 +19,7 @@ make run-redis
 ```
 
 ![image1](docs/1.png)
-after docker-compose run redis, you can check redis cluster status.
+after docker-compose run redis, you can check redis container status.
 
 ```bash
 make inspect-redis
