@@ -24,3 +24,7 @@ clustering: ## Run the clustering script.
 io-example: ## Run the io-example script.
 	docker exec -it redis-master-1 bash -c "redis-cli -c -p 7001 set foo bar"
 	docker exec -it redis-master-1 bash -c "redis-cli -c -p 7003 get foo"
+
+.PHONY: convert-kompose
+convert-kompose: ## Convert the kompose file to docker-compose.
+	kompose convert --volumes hostPath
