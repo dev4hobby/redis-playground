@@ -25,6 +25,24 @@ io-example: ## Run the io-example script.
 	docker exec -it redis-master-1 bash -c "redis-cli -c -p 7001 set foo bar"
 	docker exec -it redis-master-1 bash -c "redis-cli -c -p 7003 get foo"
 
-.PHONY: convert-kompose
-convert-kompose: ## Convert the kompose file to docker-compose.
+.PHONY: install-kompose
+install-kompose: ## Install kompose
+	/bin/bash ./scripts/install-kompose.sh $(OS)
+
+.PHONY: install-kubectl
+install-kubectl: ## Install kubectl
+	/bin/bash ./scripts/install-kubectl.sh $(OS)
+
+.PHONY: install-kubectl-convert
+install-kubectl-convert: ## Install kubectl convert
+	/bin/bash ./scripts/install-kubectl-convert.sh $(OS)
+
+.PHONY: kompose
+kompose: ## Convert the kompose file to docker-compose.
 	kompose convert --volumes hostPath
+	kubectl apply -f redis-master-1-service.yaml,redis-master-2-service.yaml,redis-master-3-service.yaml,redis-master-1-deployment.yaml,redis-master-2-deployment.yaml,redis-master-3-deployment.yaml
+	kubectl describe svc redis-master-1
+
+.PHONY: clean
+clean:
+	rm -rf redis-master-*.yaml
