@@ -6,7 +6,7 @@ services:
     network_mode: host
     command: redis-server /etc/redis.conf
     volumes:
-      - ./redis-master-1.conf:/etc/redis.conf
+      - ./conf/redis-master-1.conf:/etc/redis.conf
     restart: always
     ports:
       - 7001:7001
@@ -17,7 +17,7 @@ services:
     network_mode: host
     command: redis-server /etc/redis.conf
     volumes:
-      - ./redis-master-2.conf:/etc/redis.conf
+      - ./conf/redis-master-2.conf:/etc/redis.conf
     restart: always
     ports:
       - 7002:7002
@@ -28,7 +28,7 @@ services:
     network_mode: host
     command: redis-server /etc/redis.conf
     volumes:
-      - ./redis-master-3.conf:/etc/redis.conf
+      - ./conf/redis-master-3.conf:/etc/redis.conf
     restart: always
     ports:
       - 7003:7003
