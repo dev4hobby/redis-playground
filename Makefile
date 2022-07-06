@@ -45,4 +45,4 @@ kompose: ## Convert the kompose file to docker-compose.
 
 .PHONY: clean
 clean:
-	rm -rf redis-master-*.yaml
+	docker compose down
