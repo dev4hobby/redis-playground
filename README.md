@@ -18,7 +18,7 @@ run-redis            Run all redis container via docker-compose.
 make run-redis
 ```
 
-![image1](docs/1.png)
+![image1](docs/1.gif)
 after docker-compose run redis, you can check redis container are clustered.  
 if you wanna know how container are clustered, [Check this out](https://github.com/dev4hobby/redis-cluster-playground/blob/main/docker-compose.yml#L72)
 
