@@ -18,7 +18,7 @@ inspect-redis: ## Inspect the redis container.
 
 .PHONY: clustering
 clustering: ## Run the clustering script.
-	docker exec -it redis-master-1 bash -c "redis-cli --cluster create 127.0.0.1:7001 127.0.0.1:7002 127.0.0.1:7003"
+	docker exec -it redis-master-1 bash -c "redis-cli --cluster create 127.0.0.1:7001 127.0.0.1:7002 127.0.0.1:7003 127:0.0.1:7004 127:0.0.1:7005 127:0.0.1:7006 --cluster-yes --cluster-replicas 1"
 
 .PHONY: io-example
 io-example: ## Run the io-example script.
