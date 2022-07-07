@@ -9,16 +9,13 @@ docker exec -it redis-master-1 bash
 
 ```bash
 # from redis-master-1 (docker:7001)
-redis-cli --cluster create 127.0.0.1:7001 127.0.0.1:7002 127.0.0.1:7003
+redis-cli --cluster create 127.0.0.1:7001 127.0.0.1:7002 127.0.0.1:7003 127.0.0.1:7004 127.0.0.1:7005 127.0.0.1:7006 --cluster-yes --cluster-replicas 1
 ```
 
 ## Check cluster
 
 ```bash
-# from redis-master-1 (docker:7001)
 redis-cli -c -p 7001
-# redis-cli -c -p 7002
-# redis-cli -c -p 7003
 cluster info
 cluster nodes
 ```
@@ -28,7 +25,6 @@ cluster nodes
 ### Case 1
 
 ```bash
-# from redis-master-1 (docker:7001)
 redis-cli -c -p 7002
 set asd 123
 exit
