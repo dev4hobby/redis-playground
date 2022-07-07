@@ -23,8 +23,7 @@ after docker-compose run redis, you can check redis container status.
 
 ```bash
 make inspect-redis
-redis-cli --cluster create 127.0.0.1:7001 127.0.0.1:7002 127.0.0.1:7003
-
+redis-cli --cluster create 127.0.0.1:7001 127.0.0.1:7002 127.0.0.1:7003 127.0.0.1:7004 127.0.0.1:7005 127.0.0.1:7006 --cluster-yes --cluster-replicas 1
 
 # or just..
 make clustrering # and type yes
@@ -32,7 +31,7 @@ make clustrering # and type yes
 
 ![image2](docs/2.png)
 
-Now all of redis-master-1, redis-master-2, redis-master-3 are in the cluster.
+Now all of redis-master-1, ..., redis-replica-6 are in the cluster.
 
 ```bash
 docker exec -it redis-master-1 bash -c "redis-cli -c -p 7001 set foo bar"
