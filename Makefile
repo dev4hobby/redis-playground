@@ -11,6 +11,7 @@ help: ## Show this help message.
 .PHONY: run-redis
 run-redis: ## Run all redis container via docker-compose.
 	docker-compose up -d
+	/bin/bash ./scripts/delete-helper-container.sh
 
 .PHONY: inspect-redis
 inspect-redis: ## Inspect the redis container.
