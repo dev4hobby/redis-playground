@@ -19,19 +19,10 @@ make run-redis
 ```
 
 ![image1](docs/1.png)
-after docker-compose run redis, you can check redis container status.
+after docker-compose run redis, you can check redis container are clustered.  
+if you wanna know how container are clustered, [Check this out](https://github.com/dev4hobby/redis-cluster-playground/blob/main/docker-compose.yml#L72)
 
-```bash
-make inspect-redis
-redis-cli --cluster create 127.0.0.1:7001 127.0.0.1:7002 127.0.0.1:7003 127.0.0.1:7004 127.0.0.1:7005 127.0.0.1:7006 --cluster-yes --cluster-replicas 1
-
-# or just..
-make clustrering # and type yes
-```
-
-![image2](docs/2.png)
-
-Now all of redis-master-1, ..., redis-replica-6 are in the cluster.
+![image3](docs/3.png)
 
 ```bash
 docker exec -it redis-master-1 bash -c "redis-cli -c -p 7001 set foo bar"
@@ -41,6 +32,6 @@ docker exec -it redis-master-1 bash -c "redis-cli -c -p 7003 get foo"
 make io-example
 ```
 
-![image3](docs/3.png)
+Redis container are clustered.
 
 Done. Easy huh?
