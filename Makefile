@@ -1,49 +1,135 @@
+MAKEFLAGS += --silent
 path := .
 
-define Comment
-	- Run `make help` to see all the available options.
-endef
-
 .PHONY: help
-help: ## Show this help message.
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+help: ## 지금 보고있는거
+	@echo "Usage: make [target]"
+	@echo ""
+	@echo "Targets:"
+	@awk '/^[a-zA-Z\-\_0-9]+:/ { \
+		nb = sub( /^## /, "", helpMsg ); \
+		if(nb == 0) { \
+			helpMsg = $$0; \
+			nb = sub( /^[^:]*:.* ## /, "", helpMsg ); \
+		} \
+		if (nb) \
+			print $$1 " " helpMsg; \
+	} \
+	{ helpMsg = $$0 }' $(MAKEFILE_LIST) | \
+		sort | \
+		column -tx -s ':'
 
-.PHONY: run-redis
-run-redis: ## Run all redis container via docker-compose.
-	docker-compose up -d
-	/bin/bash ./scripts/delete-helper-container.sh
+.PHONY: clean-cache
+clean-cache: ## 캐시 및 필요없는 리소스 제거
+	rm -rf `find . -name '__pycache__'`
 
-.PHONY: inspect-redis
-inspect-redis: ## Inspect the redis container.
-	docker exec -it redis-master-1 bash
+.PHONY: build
+build: ## 클러스터 레디스 환경 빌드
+	if [ -z "$(MODE)" ]; then \
+		echo "MODE is empty"; \
+		echo "Usage: make build MODE=<mode>"; \
+		exit 1; \
+	fi
+	docker-compose -f docker-compose-$(MODE).yaml build
 
-.PHONY: clustering
-clustering: ## Run the clustering script.
-	docker exec -it redis-master-1 bash -c "redis-cli --cluster create 127.0.0.1:7001 127.0.0.1:7002 127.0.0.1:7003 127:0.0.1:7004 127:0.0.1:7005 127:0.0.1:7006 --cluster-yes --cluster-replicas 1"
+.PHONY: up
+up: ## 클러스터 레디스 환경 실행
+	if [ -z "$(MODE)" ]; then \
+		echo "MODE is empty"; \
+		echo "Usage: make up MODE=<mode>"; \
+		exit 1; \
+	fi
+	docker-compose -f docker-compose-$(MODE).yaml --env-file .env up
 
-.PHONY: io-example
-io-example: ## Run the io-example script.
-	docker exec -it redis-master-1 bash -c "redis-cli -c -p 7001 set foo bar"
-	docker exec -it redis-master-1 bash -c "redis-cli -c -p 7003 get foo"
+.PHONY: down
+down: ## 레디스 환경 종료
+	docker-compose -f docker-compose-cluster.yaml -f docker-compose-replica.yaml -f docker-compose-sentinel.yaml down --remove-orphans
 
-.PHONY: install-kompose
-install-kompose: ## Install kompose
-	/bin/bash ./scripts/install-kompose.sh $(OS)
+.PHONY: stop-replica-master
+stop-replica-master: ## 레플리카 마스터 레디스 종료
+	docker-compose -f docker-compose-replica.yaml stop redis-primary
 
-.PHONY: install-kubectl
-install-kubectl: ## Install kubectl
-	/bin/bash ./scripts/install-kubectl.sh $(OS)
+.PHONY: start-replica-master
+start-replica-master: ## 레플리카 마스터 레디스 실행
+	docker-compose -f docker-compose-replica.yaml restart redis-primary
 
-.PHONY: install-kubectl-convert
-install-kubectl-convert: ## Install kubectl convert
-	/bin/bash ./scripts/install-kubectl-convert.sh $(OS)
+.PHONY: stop-replica-slave
+stop-replica-slave: ## 레플리카 슬레이브 레디스 종료
+	docker-compose -f docker-compose-replica.yaml stop redis-replica
 
-.PHONY: kompose
-kompose: ## Convert the kompose file to docker-compose.
-	kompose convert --volumes hostPath
-	kubectl apply -f redis-master-1-service.yaml,redis-master-2-service.yaml,redis-master-3-service.yaml,redis-master-1-deployment.yaml,redis-master-2-deployment.yaml,redis-master-3-deployment.yaml
-	kubectl describe svc redis-master-1
+.PHONY: start-replica-slave
+start-replica-slave: ## 레플리카 슬레이브 레디스 실행
+	docker-compose -f docker-compose-replica.yaml restart redis-replica
 
-.PHONY: clean
-clean:
-	docker compose down
+.PHONY: stop-cluster-master
+stop-cluster-master: ## 클러스터 마스터 레디스 종료
+	if [ -z "$(ID)" ]; then \
+		echo "ID is empty"; \
+		echo "Usage: make stop-cluster-master ID=<id>"; \
+		exit 1; \
+	fi
+	docker-compose -f docker-compose-cluster.yaml stop redis-primary-$(ID)
+
+.PHONY: start-cluster-master
+start-cluster-master: ## 클러스터 마스터 레디스 실행
+	if [ -z "$(ID)" ]; then \
+		echo "ID is empty"; \
+		echo "Usage: make stop-cluster-master ID=<id>"; \
+		exit 1; \
+	fi
+	docker-compose -f docker-compose-cluster.yaml restart redis-primary-$(ID)
+
+.PHONY: stop-cluster-slave
+stop-cluster-slave: ## 클러스터 슬레이브 레디스 종료
+	if [ -z "$(ID)" ]; then \
+		echo "ID is empty"; \
+		echo "Usage: make stop-cluster-master ID=<id>"; \
+		exit 1; \
+	fi
+	docker-compose -f docker-compose-cluster.yaml stop redis-replica-$(ID)
+
+.PHONY: start-cluster-slave
+start-cluster-slave: ## 클러스터 슬레이브 레디스 실행
+	if [ -z "$(ID)" ]; then \
+		echo "ID is empty"; \
+		echo "Usage: make stop-cluster-master ID=<id>"; \
+		exit 1; \
+	fi
+	docker-compose -f docker-compose-cluster.yaml restart redis-replica-$(ID)
+
+.PHONY: client
+client: ## 클라이언트 실행
+	if [ -z "$(MODE)" ]; then \
+		echo "MODE is empty"; \
+		echo "Usage: make client MODE=<mode> TYPE=<type>"; \
+		exit 1; \
+	fi
+	if [ -z "$(TYPE)" ]; then \
+		echo "TYPE is empty"; \
+		echo "Usage: make client MODE=<mode> TYPE=<type>"; \
+		exit 1; \
+	fi
+	docker-compose -f docker-compose-$(MODE).yaml exec -- $(TYPE)-client /bin/sh -c "./redis-client"
+
+.PHONY: shell
+shell: ## 클라이언트 쉘 접속
+	if [ -z "$(MODE)" ]; then \
+		echo "MODE is empty"; \
+		echo "Usage: make shell MODE=<mode> TYPE=<type>"; \
+		exit 1; \
+	fi
+	if [ -z "$(TYPE)" ]; then \
+		echo "TYPE is empty"; \
+		echo "Usage: make shell MODE=<mode> TYPE=<type>"; \
+		exit 1; \
+	fi
+	docker-compose -f docker-compose-$(MODE).yaml exec -- $(TYPE)-client /bin/sh
+
+.PHONY: account
+account: ## 계정 생성
+	if [ -z "$(NAME)" ]; then \
+		echo "NAME is empty"; \
+		echo "Usage: make account NAME=<name>"; \
+		exit 1; \
+	fi
+	python tool/acl_generator.py $(NAME)

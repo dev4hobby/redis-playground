@@ -1,0 +1,227 @@
+version: "3"
+services:
+  redis-stat:
+    container_name: redis-stat
+    image: insready/redis-stat
+    command: [
+      '--verbose',
+      '--server',
+      '127.0.0.1:7001',
+      '127.0.0.1:7002',
+      '127.0.0.1:7003',
+      '127.0.0.1:7004',
+      '127.0.0.1:7005',
+      '127.0.0.1:7006',
+      '-a',
+      '${REDIS_PASSWORD}',
+    ]
+    ports:
+      - 7001:7001
+      - 7002:7002
+      - 7003:7003
+      - 7004:7004
+      - 7005:7005
+      - 7006:7006
+      - 63790:63790
+  redis-primary-1:
+    container_name: redis-primary-1
+    network_mode: "service:redis-stat"
+    build:
+      context: .
+      dockerfile: redis.Dockerfile
+    volumes:
+      - ./redis/common:/d3fau1t/etc/conf/common
+      - ./redis/acl/local.acl:/d3fau1t/etc/users.acl
+      - ./redis/nodes/cluster/primary-1.conf:/d3fau1t/etc/conf/redis.conf
+      - ./redis/scripts/run-redis.sh:/d3fau1t/bin/run
+    entrypoint: ["/bin/bash", "/d3fau1t/bin/run"]
+  redis-primary-2:
+    container_name: redis-primary-2
+    network_mode: "service:redis-stat"
+    build:
+      context: .
+      dockerfile: redis.Dockerfile
+    volumes:
+      - ./redis/common:/d3fau1t/etc/conf/common
+      - ./redis/acl/local.acl:/d3fau1t/etc/users.acl
+      - ./redis/nodes/cluster/primary-2.conf:/d3fau1t/etc/conf/redis.conf
+      - ./redis/scripts/run-redis.sh:/d3fau1t/bin/run
+    entrypoint: ["/bin/bash", "/d3fau1t/bin/run"]
+  redis-primary-3:
+    container_name: redis-primary-3
+    network_mode: "service:redis-stat"
+    build:
+      context: .
+      dockerfile: redis.Dockerfile
+    volumes:
+      - ./redis/common:/d3fau1t/etc/conf/common
+      - ./redis/acl/local.acl:/d3fau1t/etc/users.acl
+      - ./redis/nodes/cluster/primary-3.conf:/d3fau1t/etc/conf/redis.conf
+      - ./redis/scripts/run-redis.sh:/d3fau1t/bin/run
+    entrypoint: ["/bin/bash", "/d3fau1t/bin/run"]
+  redis-replica-1:
+    container_name: redis-replica-1
+    network_mode: "service:redis-stat"
+    build:
+      context: .
+      dockerfile: redis.Dockerfile
+    volumes:
+      - ./redis/common:/d3fau1t/etc/conf/common
+      - ./redis/acl/local.acl:/d3fau1t/etc/users.acl
+      - ./redis/nodes/cluster/replica-1.conf:/d3fau1t/etc/conf/redis.conf
+      - ./redis/scripts/run-redis.sh:/d3fau1t/bin/run
+    entrypoint: ["/bin/bash", "/d3fau1t/bin/run"]
+  redis-replica-2:
+    container_name: redis-replica-2
+    network_mode: "service:redis-stat"
+    build:
+      context: .
+      dockerfile: redis.Dockerfile
+    volumes:
+      - ./redis/common:/d3fau1t/etc/conf/common
+      - ./redis/acl/local.acl:/d3fau1t/etc/users.acl
+      - ./redis/nodes/cluster/replica-2.conf:/d3fau1t/etc/conf/redis.conf
+      - ./redis/scripts/run-redis.sh:/d3fau1t/bin/run
+    entrypoint: ["/bin/bash", "/d3fau1t/bin/run"]
+  redis-replica-3:
+    container_name: redis-replica-3
+    network_mode: "service:redis-stat"
+    build:
+      context: .
+      dockerfile: redis.Dockerfile
+    volumes:
+      - ./redis/common:/d3fau1t/etc/conf/common
+      - ./redis/acl/local.acl:/d3fau1t/etc/users.acl
+      - ./redis/nodes/cluster/replica-3.conf:/d3fau1t/etc/conf/redis.conf
+      - ./redis/scripts/run-redis.sh:/d3fau1t/bin/run
+    entrypoint: ["/bin/bash", "/d3fau1t/bin/run"]
+  redis-clustering-helper:
+    tty: true
+    network_mode: "service:redis-stat"
+    build:
+      context: .
+      dockerfile: redis.Dockerfile
+    container_name: redis-clustering-helper
+    volumes:
+      - ./redis/scripts/init-cluster.sh:/d3fau1t/bin/init-cluster.sh
+    entrypoint: ["/bin/bash", "/d3fau1t/bin/init-cluster.sh"]
+    depends_on:
+      redis-primary-1:
+        condition: service_started
+      redis-primary-2:
+        condition: service_started
+      redis-primary-3:
+        condition: service_started
+      redis-replica-1:
+        condition: service_started
+      redis-replica-2:
+        condition: service_started
+      redis-replica-3:
+        condition: service_started
+  python-client:
+    tty: true
+    network_mode: "service:redis-stat"
+    build:
+      context: .
+      dockerfile: python.Dockerfile
+    container_name: python-client
+    volumes:
+      - ./app/python:/d3fau1t
+    environment:
+      - REDIS_MODE=cluster
+      - REDIS_ADDRS=redis://127.0.0.1:7001,redis://127.0.0.1:7002,redis://127.0.0.1:7003,redis://127.0.0.1:7004,redis://127.0.0.1:7005,redis://127.0.0.1:7006
+      - REDIS_USER=${REDIS_USER}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    depends_on:
+      redis-clustering-helper:
+        condition: service_completed_successfully
+  python-test:
+    network_mode: "service:redis-stat"
+    build:
+      context: .
+      dockerfile: python.Dockerfile
+    container_name: python-test
+    volumes:
+      - ./app/python:/d3fau1t
+    environment:
+      - REDIS_MODE=cluster
+      - REDIS_ADDRS=redis://127.0.0.1:7001,redis://127.0.0.1:7002,redis://127.0.0.1:7003,redis://127.0.0.1:7004,redis://127.0.0.1:7005,redis://127.0.0.1:7006
+      - REDIS_USER=${REDIS_USER}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    depends_on:
+      redis-clustering-helper:
+        condition: service_completed_successfully
+    command: |
+      sh -c 'poetry install && poetry run pytest -s -v'
+  node-client:
+    tty: true
+    network_mode: "service:redis-stat"
+    build:
+      context: .
+      dockerfile: node.Dockerfile
+    container_name: node-client
+    volumes:
+      - ./app/node:/d3fau1t
+    environment:
+      - REDIS_MODE=cluster
+      - REDIS_ADDRS=redis://127.0.0.1:7001,redis://127.0.0.1:7002,redis://127.0.0.1:7003,redis://127.0.0.1:7004,redis://127.0.0.1:7005,redis://127.0.0.1:7006
+      - REDIS_USER=${REDIS_USER}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    depends_on:
+      redis-clustering-helper:
+        condition: service_completed_successfully
+  go-client:
+    tty: true
+    network_mode: "service:redis-stat"
+    build:
+      context: .
+      dockerfile: go.Dockerfile
+    container_name: go-client
+    volumes:
+      - ./app/go/src:/d3fau1t/src
+    environment:
+      - REDIS_MODE=cluster
+      - REDIS_ADDRS=redis://127.0.0.1:7001,redis://127.0.0.1:7002,redis://127.0.0.1:7003,redis://127.0.0.1:7004,redis://127.0.0.1:7005,redis://127.0.0.1:7006
+      - REDIS_USER=${REDIS_USER}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    depends_on:
+      redis-clustering-helper:
+        condition: service_completed_successfully
+  load-generator:
+    tty: true
+    network_mode: "service:redis-stat"
+    build:
+      context: .
+      dockerfile: python.Dockerfile
+    container_name: load-generator
+    volumes:
+      - ./app/python:/d3fau1t
+    environment:
+      - REDIS_MODE=cluster
+      - REDIS_ADDRS=redis://127.0.0.1:7001,redis://127.0.0.1:7002,redis://127.0.0.1:7003,redis://127.0.0.1:7004,redis://127.0.0.1:7005,redis://127.0.0.1:7006
+      - REDIS_USER=${REDIS_USER}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    depends_on:
+      redis-clustering-helper:
+        condition: service_completed_successfully
+    command: |
+      bash -c 'poetry run python load_generator.py'
+  retriever:
+    tty: true
+    network_mode: "service:redis-stat"
+    build:
+      context: .
+      dockerfile: python.Dockerfile
+    container_name: retriever
+    volumes:
+      - ./app/python:/d3fau1t
+    environment:
+      - REDIS_MODE=cluster
+      - REDIS_ADDRS=redis://127.0.0.1:7001,redis://127.0.0.1:7002,redis://127.0.0.1:7003,redis://127.0.0.1:7004,redis://127.0.0.1:7005,redis://127.0.0.1:7006
+      - REDIS_USER=${REDIS_USER}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    depends_on:
+      redis-clustering-helper:
+        condition: service_completed_successfully
+    command: |
+      bash -c 'poetry run python retriever.py'

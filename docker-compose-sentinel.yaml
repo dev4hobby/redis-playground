@@ -1,0 +1,150 @@
+version: "3"
+services:
+  redis-stat:
+    container_name: redis-stat
+    image: insready/redis-stat
+    command: [
+      '--verbose',
+      '--server',
+      'redis-primary:6379',
+      'redis-replica:6379',
+      '-a',
+      '${REDIS_PASSWORD}',
+    ]
+    ports:
+      - "63790:63790"
+  redis-primary:
+    container_name: redis-primary
+    build:
+      context: .
+      dockerfile: redis.Dockerfile
+    ports:
+      - "26379:6379"
+    volumes:
+      - ./redis/common:/d3fau1t/etc/conf/common
+      - ./redis/acl/local.acl:/d3fau1t/etc/users.acl
+      - ./redis/nodes/replica/primary.conf:/d3fau1t/etc/conf/redis.conf
+      - ./redis/scripts/run-redis.sh:/d3fau1t/bin/run
+    entrypoint: ["/bin/bash", "/d3fau1t/bin/run"]
+  redis-replica:
+    container_name: redis-replica
+    build:
+      context: .
+      dockerfile: redis.Dockerfile
+    links:
+      - redis-primary
+    ports:
+      - "26380:6379"
+    volumes:
+      - ./redis/common:/d3fau1t/etc/conf/common
+      - ./redis/acl/local.acl:/d3fau1t/etc/users.acl
+      - ./redis/nodes/replica/replica.conf:/d3fau1t/etc/conf/redis.conf
+      - ./redis/scripts/run-replica.sh:/d3fau1t/bin/run
+    entrypoint: ["/bin/bash", "/d3fau1t/bin/run"]
+  redis-sentinel-1:
+    container_name: redis-sentinel-1
+    build:
+      context: .
+      dockerfile: sentinel.Dockerfile
+    links:
+      - redis-primary
+      - redis-replica
+    ports:
+      - "36379:26379"
+  redis-sentinel-2:
+    container_name: redis-sentinel-2
+    build:
+      context: .
+      dockerfile: sentinel.Dockerfile
+    links:
+      - redis-primary
+      - redis-replica
+    ports:
+      - "36380:26379"
+  redis-sentinel-3:
+    container_name: redis-sentinel-3
+    build:
+      context: .
+      dockerfile: sentinel.Dockerfile
+    links:
+      - redis-primary
+      - redis-replica
+    ports:
+      - "36381:26379"
+  python-client:
+    tty: true
+    container_name: python-client
+    build:
+      context: .
+      dockerfile: python.Dockerfile
+    volumes:
+      - ./app/python:/d3fau1t
+    links:
+      - redis-sentinel-1
+      - redis-sentinel-2
+      - redis-sentinel-3
+    environment:
+      - REDIS_MODE=sentinel
+      - REDIS_ADDRS=redis://redis-sentinel-1:26379,redis://redis-sentinel-2:26379,redis://redis-sentinel-3:26379
+      - REDIS_SENTINEL_NAME=redisprimary
+      - REDIS_USER=${REDIS_USER}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_DB=0
+  python-test:
+    build:
+      context: .
+      dockerfile: python.Dockerfile
+    container_name: python-test
+    volumes:
+      - ./app/python:/d3fau1t
+    links:
+      - redis-sentinel-1
+      - redis-sentinel-2
+      - redis-sentinel-3
+    environment:
+      - REDIS_MODE=sentinel
+      - REDIS_ADDRS=redis://redis-sentinel-1:26379,redis://redis-sentinel-2:26379,redis://redis-sentinel-3:26379
+      - REDIS_SENTINEL_NAME=redisprimary
+      - REDIS_USER=${REDIS_USER}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_DB=0
+    command: |
+      sh -c 'poetry install && poetry run pytest -s -v'
+  node-client:
+    tty: true
+    container_name: node-client
+    build:
+      context: .
+      dockerfile: node.Dockerfile
+    volumes:
+      - ./app/node:/d3fau1t
+    links:
+      - redis-sentinel-1
+      - redis-sentinel-2
+      - redis-sentinel-3
+    environment:
+      - REDIS_MODE=sentinel
+      - REDIS_ADDRS=redis://redis-sentinel-1:26379,redis://redis-sentinel-2:26379,redis://redis-sentinel-3:26379
+      - REDIS_SENTINEL_NAME=redisprimary
+      - REDIS_USER=${REDIS_USER}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_DB=0
+  go-client:
+    tty: true
+    container_name: go-client
+    build:
+      context: .
+      dockerfile: go.Dockerfile
+    volumes:
+      - ./app/go/src:/d3fau1t/src
+    links:
+      - redis-sentinel-1
+      - redis-sentinel-2
+      - redis-sentinel-3
+    environment:
+      - REDIS_MODE=sentinel
+      - REDIS_ADDRS=redis://redis-sentinel-1:26379,redis://redis-sentinel-2:26379,redis://redis-sentinel-3:26379
+      - REDIS_SENTINEL_NAME=redisprimary
+      - REDIS_USER=${REDIS_USER}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_DB=0

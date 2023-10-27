@@ -1,2 +1,5 @@
 .vscode
-redis-master-*.yaml
+.DS_Store
+node_modules
+__pycache__
+.pytest_cache
