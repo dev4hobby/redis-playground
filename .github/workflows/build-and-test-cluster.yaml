@@ -1,0 +1,32 @@
+name: Build & Test w/ redis cluster
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+    tags:
+      - v*
+  pull_request:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    -
+      name: Build the Docker image
+      uses: actions/checkout@v3
+    -
+      name: Build host info
+      run: |
+        uname -a
+        cat /etc/os-release
+    -
+      name: Build all images for test
+      run: |
+        docker-compose -f docker-compose-cluster.yaml build
+    -
+      name: Run test
+      run: |
+        bash -c " \
+        docker-compose -f docker-compose-cluster.yaml --env-file .env up -d redis-primary-1 redis-primary-2 redis-primary-3 redis-replica-1 redis-replica-2 redis-replica-3 redis-clustering-helper \
+        && docker-compose -f docker-compose-cluster.yaml --env-file .env up --abort-on-container-exit --exit-code-from=python-test python-test"

@@ -1,0 +1,32 @@
+name: Build & Test w/ redis sentinel
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+    tags:
+      - v*
+  pull_request:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    -
+      name: Build the Docker image
+      uses: actions/checkout@v3
+    -
+      name: Build host info
+      run: |
+        uname -a
+        cat /etc/os-release
+    -
+      name: Build all images for test
+      run: |
+        docker-compose -f docker-compose-sentinel.yaml build
+    -
+      name: Run test
+      run: |
+        bash -c " \
+        docker-compose -f docker-compose-sentinel.yaml --env-file .env up -d redis-primary redis-replica redis-sentinel-1 redis-sentinel-2 redis-sentinel-3 \
+        && docker-compose -f docker-compose-sentinel.yaml --env-file .env up --abort-on-container-exit --exit-code-from=python-test python-test"
