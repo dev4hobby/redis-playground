@@ -1,5 +1,5 @@
 #!/bin/bash
-sleep 2
+sleep 5
 redis-cli --cluster create \
   127.0.0.1:7001 \
   127.0.0.1:7002 \
