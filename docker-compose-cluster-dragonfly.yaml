@@ -1,0 +1,95 @@
+version: "3"
+services:
+  redis-cluster-emulator:
+    container_name: redis-primary
+    image: 'docker.dragonflydb.io/dragonflydb/dragonfly'
+    ports:
+      - "26379:6379"
+    command: |
+      sh -c '\
+        dragonfly --cluster_mode=emulated \
+      '
+  redis-acl-helper:
+    tty: true
+    container_name: redis-acl-helper
+    image: 'redis:7.2.2'
+    links:
+      - redis-cluster-emulator
+    command: |
+      sh -c '\
+        echo "acl setuser dfuser on >changeme +@all" \
+        | redis-cli -h redis-cluster-emulator -p 6379 \
+      '
+  python-client:
+    tty: true
+    container_name: python-client
+    build:
+      context: .
+      dockerfile: python.Dockerfile
+    volumes:
+      - ./app/python:/d3fau1t
+    links:
+      - redis-cluster-emulator
+    environment:
+      - REDIS_MODE=cluster
+      - REDIS_ADDRS=redis://redis-cluster-emulator:6379
+      - REDIS_USER=dfuser
+      - REDIS_PASSWORD=changeme
+    depends_on:
+      redis-acl-helper:
+        condition: service_completed_successfully
+  python-test:
+    build:
+      context: .
+      dockerfile: python.Dockerfile
+    container_name: python-test
+    volumes:
+      - ./app/python:/d3fau1t
+    links:
+      - redis-cluster-emulator
+    environment:
+      - REDIS_MODE=cluster
+      - REDIS_ADDRS=redis://redis-cluster-emulator:6379
+      - REDIS_USER=dfuser
+      - REDIS_PASSWORD=changeme
+    command: |
+      sh -c 'poetry install && poetry run pytest -s -v'
+    depends_on:
+      redis-acl-helper:
+        condition: service_completed_successfully
+  node-client:
+    tty: true
+    container_name: node-client
+    build:
+      context: .
+      dockerfile: node.Dockerfile
+    volumes:
+      - ./app/node:/d3fau1t
+    links:
+      - redis-cluster-emulator
+    environment:
+      - REDIS_MODE=cluster
+      - REDIS_ADDRS=redis://redis-cluster-emulator:6379
+      - REDIS_USER=dfuser
+      - REDIS_PASSWORD=changeme
+    depends_on:
+      redis-acl-helper:
+        condition: service_completed_successfully
+  go-client:
+    tty: true
+    container_name: go-client
+    build:
+      context: .
+      dockerfile: go.Dockerfile
+    volumes:
+      - ./app/go/src:/d3fau1t/src
+    links:
+      - redis-cluster-emulator
+    environment:
+      - REDIS_MODE=cluster
+      - REDIS_ADDRS=redis://redis-cluster-emulator:6379
+      - REDIS_USER=dfuser
+      - REDIS_PASSWORD=changeme
+    depends_on:
+      redis-acl-helper:
+        condition: service_completed_successfully

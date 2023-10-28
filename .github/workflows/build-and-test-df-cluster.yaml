@@ -1,0 +1,32 @@
+name: Build & Test w/ df-redis cluster
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+    tags:
+      - v*
+  pull_request:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    -
+      name: Build the Docker image
+      uses: actions/checkout@v3
+    -
+      name: Build host info
+      run: |
+        uname -a
+        cat /etc/os-release
+    -
+      name: Build all images for test
+      run: |
+        docker-compose -f docker-compose-cluster-dragonfly.yaml build
+    -
+      name: Run test
+      run: |
+        bash -c " \
+        docker-compose -f docker-compose-cluster-dragonfly.yaml up -d redis-cluster-emulator redis-acl-helper \
+        && docker-compose -f docker-compose-cluster-dragonfly.yaml up --abort-on-container-exit --exit-code-from=python-test python-test"

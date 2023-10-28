@@ -27,14 +27,16 @@ Redis 환경 구축 및 테스트를 위한 Dockerfile 및 기타 리소스가 �
 Usage: make [target]
 
 Targets:
+
 help                   지금 보고있는거
+
 account                계정 생성
-build                  클러스터 레디스 환경 빌드
-clean-cache            캐시 및 필요없는 리소스 제거
+build                  레디스 환경 빌드
+up                     레디스 환경 실행
+
 client                 클라이언트 실행
-up                     클러스터 레디스 환경 실행
-down                   레디스 환경 종료
 shell                  클라이언트 쉘 접속
+
 start-cluster-master   클러스터 마스터 레디스 실행
 stop-cluster-master    클러스터 마스터 레디스 종료
 start-cluster-slave    클러스터 슬레이브 레디스 실행
@@ -43,6 +45,12 @@ start-replica-master   레플리카 마스터 레디스 실행
 stop-replica-master    레플리카 마스터 레디스 종료
 start-replica-slave    레플리카 슬레이브 레디스 실행
 stop-replica-slave     레플리카 슬레이브 레디스 종료
+
+build-df               [unstable] dragonfly 레디스 환경 빌드
+up-df                  [unstable] dragonfly 레디스 환경 실행
+
+down                   레디스 환경 종료
+clean-cache            캐시 및 필요없는 리소스 제거
 ```
 
 ### 클러스터 구성
@@ -107,3 +115,13 @@ make down
 ```
 
 사용하던 모든 리소스를 정리합니다.
+
+## Redis backend 변경
+
+> Unstable, 상용환경에 적용하기엔 다소 검증이 필요합니다.
+
+기존의 [Redis](https://github.com/redis/redis)와 호환되는 [Dragonfly](https://github.com/dragonflydb/dragonfly) 를 사용해보실 수 있습니다.
+
+redis가 지원하는 대부분의 커맨드를 지원하지만 아직 불안정해보입니다.
+
+[dragonfly/contrib/docker/docker-compose.yaml](https://github.com/dragonflydb/dragonfly/blob/main/contrib/docker/docker-compose.yml) 파일을 참조하여 환경을 구성하였습니다.
