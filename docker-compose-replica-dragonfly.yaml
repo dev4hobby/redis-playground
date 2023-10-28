@@ -1,0 +1,110 @@
+version: "3"
+services:
+  redis-primary:
+    container_name: redis-primary
+    image: 'docker.dragonflydb.io/dragonflydb/dragonfly'
+    ports:
+      - "26379:6379"
+  redis-replica:
+    container_name: redis-replica
+    image: 'docker.dragonflydb.io/dragonflydb/dragonfly'
+    links:
+      - redis-primary
+    ports:
+      - "26380:6379"
+    command: dragonfly --replicaof redis-primary:6379
+  redis-acl-helper:
+    tty: true
+    container_name: redis-acl-helper
+    image: 'redis:7.2.2'
+    links:
+      - redis-primary
+      - redis-replica
+    command: |
+      sh -c '\
+        echo "acl setuser dfuser on >changeme +@all" \
+        | redis-cli -h redis-primary -p 6379 \
+        && echo "acl setuser dfuser on >changeme +@all" \
+        | redis-cli -h redis-replica -p 6379 \
+      '
+  python-client:
+    tty: true
+    container_name: python-client
+    build:
+      context: .
+      dockerfile: python.Dockerfile
+    volumes:
+      - ./app/python:/d3fau1t
+    links:
+      - redis-primary
+      - redis-replica
+    environment:
+      - REDIS_MODE=replica
+      - REDIS_ADDRS=redis://redis-primary:6379
+      - REDIS_USER=dfuser
+      - REDIS_PASSWORD=changeme
+      - REDIS_DB=0
+    depends_on:
+      redis-acl-helper:
+        condition: service_completed_successfully
+  python-test:
+    build:
+      context: .
+      dockerfile: python.Dockerfile
+    container_name: python-test
+    volumes:
+      - ./app/python:/d3fau1t
+    links:
+      - redis-primary
+      - redis-replica
+    environment:
+      - REDIS_MODE=replica
+      - REDIS_ADDRS=redis://redis-primary:6379
+      - REDIS_USER=dfuser
+      - REDIS_PASSWORD=changeme
+      - REDIS_DB=0
+    command: |
+      sh -c 'poetry install && poetry run pytest -s -v'
+    depends_on:
+      redis-acl-helper:
+        condition: service_completed_successfully
+  node-client:
+    tty: true
+    container_name: node-client
+    build:
+      context: .
+      dockerfile: node.Dockerfile
+    volumes:
+      - ./app/node:/d3fau1t
+    links:
+      - redis-primary
+      - redis-replica
+    environment:
+      - REDIS_MODE=replica
+      - REDIS_ADDRS=redis://redis-primary:6379
+      - REDIS_USER=dfuser
+      - REDIS_PASSWORD=changeme
+      - REDIS_DB=0
+    depends_on:
+      redis-acl-helper:
+        condition: service_completed_successfully
+  go-client:
+    tty: true
+    container_name: go-client
+    build:
+      context: .
+      dockerfile: go.Dockerfile
+    volumes:
+      - ./app/go/src:/d3fau1t/src
+    links:
+      - redis-primary
+      - redis-replica
+    environment:
+      - REDIS_MODE=replica
+      - REDIS_ADDRS=redis://redis-primary:6379
+      - REDIS_USER=dfuser
+      - REDIS_PASSWORD=changeme
+      - REDIS_DB=0
+    depends_on:
+      redis-acl-helper:
+        condition: service_completed_successfully

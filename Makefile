@@ -24,26 +24,50 @@ clean-cache: ## 캐시 및 필요없는 리소스 제거
 	rm -rf `find . -name '__pycache__'`
 
 .PHONY: build
-build: ## 클러스터 레디스 환경 빌드
+build: ## 레디스 환경 빌드
 	if [ -z "$(MODE)" ]; then \
 		echo "MODE is empty"; \
 		echo "Usage: make build MODE=<mode>"; \
 		exit 1; \
 	fi
-	docker-compose -f docker-compose-$(MODE).yaml build
+	docker-compose -f docker-compose-$(MODE).yaml build --no-cache
+
+.PHONY: build-df
+build-df: ## [unstable] dragonfly 레디스 환경 빌드
+	if [ -z "$(MODE)" ]; then \
+		echo "MODE is empty"; \
+		echo "Usage: make build-df MODE=<mode>"; \
+		exit 1; \
+	fi
+	docker-compose -f docker-compose-$(MODE)-dragonfly.yaml build --no-cache
 
 .PHONY: up
-up: ## 클러스터 레디스 환경 실행
+up: ## 레디스 환경 실행
 	if [ -z "$(MODE)" ]; then \
 		echo "MODE is empty"; \
 		echo "Usage: make up MODE=<mode>"; \
 		exit 1; \
 	fi
-	docker-compose -f docker-compose-$(MODE).yaml --env-file .env up
+	docker-compose -f docker-compose-$(MODE).yaml --env-file
+
+.PHONY: up-df
+up-df: ## [unstable] dragonfly 레디스 환경 실행
+	if [ -z "$(MODE)" ]; then \
+		echo "MODE is empty"; \
+		echo "Usage: make up-df MODE=<mode>"; \
+		exit 1; \
+	fi
+	docker-compose -f docker-compose-$(MODE)-dragonfly.yaml --env-file
 
 .PHONY: down
 down: ## 레디스 환경 종료
-	docker-compose -f docker-compose-cluster.yaml -f docker-compose-replica.yaml -f docker-compose-sentinel.yaml down --remove-orphans
+	docker-compose \
+		-f docker-compose-cluster.yaml \
+		-f docker-compose-replica.yaml \
+		-f docker-compose-sentinel.yaml \
+		-f docker-compose-cluster-dragonfly.yaml \
+		-f docker-compose-replica-dragonfly.yaml \
+		down --remove-orphans
 
 .PHONY: stop-replica-master
 stop-replica-master: ## 레플리카 마스터 레디스 종료
