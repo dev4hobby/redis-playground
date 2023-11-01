@@ -53,7 +53,8 @@ async def playground(redis_: Redis):
                 resp = await redis_.set(key, value)
             now = time()
             # print milliseconds
-            print(f"inserted {count} keys in {(now - previous) * 1000}ms")
+            rounded_diff = int(round((now - previous) * 1000))
+            print(f"inserted {count} keys in {rounded_diff}ms")
             continue
         elif args[0] == "bulk-read":
             count = parse_int_or_input(args[1])
@@ -62,7 +63,8 @@ async def playground(redis_: Redis):
                 key = f"foo-{i}"
                 resp = await redis_.get(key)
             now = time()
-            print(f"read {count} keys  in {(now - previous) * 1000}ms")
+            rounded_diff = int(round((now - previous) * 1000))
+            print(f"read {count} keys in {rounded_diff}ms")
             continue
         elif args[0] == "bulk":
             count = parse_int_or_input(args[1])
@@ -73,7 +75,8 @@ async def playground(redis_: Redis):
                 resp = await redis_.set(key, value)
                 resp = await redis_.get(key)
             now = time()
-            print(f"read and write {count} keys in {(now - previous) * 1000}ms")
+            rounded_diff = int(round((now - previous) * 1000))
+            print(f"read and write {count} keys in {rounded_diff}ms")
             continue
         try:
             resp = await redis_.execute_command(*args)

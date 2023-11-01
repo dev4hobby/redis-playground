@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -135,58 +136,62 @@ func getRedisClientOrCluster() RedisClientMetadata {
 	}
 }
 
-func executeCommandOnCluster(client *redis.ClusterClient, args ...interface{}) {
+func executeCommandOnCluster(client *redis.ClusterClient, args ...interface{}) interface{} {
 	ctx := context.Background()
 	cmd := client.Do(ctx, args...)
 	resp, err := cmd.Result()
 	if err != nil {
 		fmt.Println(err.Error())
-		return
+		return nil
 	}
-	fmt.Println(resp)
+	return resp
 }
 
-func executeCommandOnCommon(client *redis.Client, args ...interface{}) {
+func executeCommandOnCommon(client *redis.Client, args ...interface{}) interface{} {
 	ctx := context.Background()
 	resp, err := client.Do(ctx, args...).Result()
 	if err != nil {
 		fmt.Println(err.Error())
-		return
+		return nil
 	}
-	fmt.Println(resp)
+	return resp
 }
 
-func executeCommandByClientType(client RedisClientMetadata, args ...interface{}) {
+func executeCommandByClientType(client RedisClientMetadata, args ...interface{}) interface{} {
 	if client.clientType == "cluster" {
-		executeCommandOnCluster(client.clusterClient, args...)
+		return executeCommandOnCluster(client.clusterClient, args...)
 	} else {
-		executeCommandOnCommon(client.commonClient, args...)
+		return executeCommandOnCommon(client.commonClient, args...)
 	}
 }
 
-func bulk(client RedisClientMetadata) {
-	count := parseInt(userInput("Count: "))
-
+func bulk(client RedisClientMetadata, count int) {
+	begin := time.Now()
 	for i := 0; i < count; i++ {
 		executeCommandByClientType(client, "SET", fmt.Sprintf("foo-%d", i), fmt.Sprintf("bar-%d", i))
 		executeCommandByClientType(client, "GET", fmt.Sprintf("foo-%d", i))
 	}
+	elapsed := time.Since(begin).Round(time.Millisecond)
+	fmt.Printf("read and write %d keys in %s\n", count, elapsed)
 }
 
-func bulkRead(client RedisClientMetadata) {
-	count := parseInt(userInput("Count: "))
-
+func bulkRead(client RedisClientMetadata, count int) {
+	begin := time.Now()
 	for i := 0; i < count; i++ {
 		executeCommandByClientType(client, "GET", fmt.Sprintf("foo-%d", i))
 	}
+	elapsed := time.Since(begin).Round(time.Millisecond)
+	fmt.Printf("read %d keys in %s\n", count, elapsed)
 }
 
-func bulkInsert(client RedisClientMetadata) {
-	count := parseInt(userInput("Count: "))
-
+func bulkInsert(client RedisClientMetadata, count int) {
+	// check progress time
+	begin := time.Now()
 	for i := 0; i < count; i++ {
 		executeCommandByClientType(client, "SET", fmt.Sprintf("foo-%d", i), fmt.Sprintf("bar-%d", i))
 	}
+	elapsed := time.Since(begin).Round(time.Millisecond)
+	fmt.Printf("inserted %d keys in %s\n", count, elapsed)
 }
 
 func userInput(prefix string) string {
@@ -255,13 +260,14 @@ func playground(client RedisClientMetadata) {
 		} else if command == "clear" {
 			screenClear()
 		} else if command == "bulk" {
-			bulk(client)
+			bulk(client, parseInt(args[1].(string)))
 		} else if command == "bulk-read" {
-			bulkRead(client)
+			bulkRead(client, parseInt(args[1].(string)))
 		} else if command == "bulk-insert" {
-			bulkInsert(client)
+			bulkInsert(client, parseInt(args[1].(string)))
 		} else {
-			executeCommandByClientType(client, args...)
+			resp := executeCommandByClientType(client, args...)
+			fmt.Println(resp)
 		}
 	}
 }
