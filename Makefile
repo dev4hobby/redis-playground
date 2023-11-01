@@ -48,7 +48,7 @@ up: ## 레디스 환경 실행
 		echo "Usage: make up MODE=<mode>"; \
 		exit 1; \
 	fi
-	docker-compose -f docker-compose-$(MODE).yaml --env-file
+	docker-compose -f docker-compose-$(MODE).yaml --env-file .env up -d
 
 .PHONY: up-df
 up-df: ## [unstable] dragonfly 레디스 환경 실행
@@ -57,7 +57,7 @@ up-df: ## [unstable] dragonfly 레디스 환경 실행
 		echo "Usage: make up-df MODE=<mode>"; \
 		exit 1; \
 	fi
-	docker-compose -f docker-compose-$(MODE)-dragonfly.yaml --env-file
+	docker-compose -f docker-compose-$(MODE)-dragonfly.yaml --env-file .env up -d
 
 .PHONY: down
 down: ## 레디스 환경 종료
